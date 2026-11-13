@@ -55,6 +55,24 @@ jobs:
           for pacote in types rest sdk; do
             (cd "packages/$pacote" && pnpm pack --pack-destination ../../pacotes)
           done
+      # O mesmo npm publish do job publicar, em simulação e sem credencial: um erro de caminho ou de pacote aparece aqui,
+      # antes da aprovação no environment. O caminho começa com ./ porque, sem ele, o npm lê "pacotes/x.tgz" como o
+      # atalho usuario/repositorio do GitHub e tenta um git ls-remote.
+      - name: Simular a publicação
+        run: |
+          shopt -s nullglob
+          escolhidos=()
+          for pacote in types rest sdk; do
+            tarballs=(./pacotes/lerolero-"$pacote"-*.tgz)
+            if [ "${#tarballs[@]}" -ne 1 ]; then
+              echo "::error::Esperava um tarball de @lerolero/$pacote em ./pacotes e achei ${#tarballs[@]}."
+              exit 1
+            fi
+            escolhidos+=("${tarballs[0]}")
+          done
+          for tarball in "${escolhidos[@]}"; do
+            npm publish "$tarball" --dry-run --access public --ignore-scripts
+          done
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: pacotes
@@ -85,7 +103,19 @@ jobs:
       - name: Publicar
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # Caminho com ./ e exatamente um tarball por pacote, conferidos todos antes do primeiro publish, para nunca
+        # publicar só parte da versão. Ver o passo "Simular a publicação" do job empacotar.
         run: |
+          shopt -s nullglob
+          escolhidos=()
           for pacote in types rest sdk; do
-            npm publish pacotes/lerolero-$pacote-*.tgz --access public --provenance --ignore-scripts
+            tarballs=(./pacotes/lerolero-"$pacote"-*.tgz)
+            if [ "${#tarballs[@]}" -ne 1 ]; then
+              echo "::error::Esperava um tarball de @lerolero/$pacote em ./pacotes e achei ${#tarballs[@]}."
+              exit 1
+            fi
+            escolhidos+=("${tarballs[0]}")
+          done
+          for tarball in "${escolhidos[@]}"; do
+            npm publish "$tarball" --access public --provenance --ignore-scripts
           done
