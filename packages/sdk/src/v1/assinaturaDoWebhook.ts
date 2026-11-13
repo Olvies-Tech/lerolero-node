@@ -17,13 +17,24 @@ export interface EntregaDoWebhook {
   cabecalhos: CabecalhosRecebidos
   /** O segredo do endpoint, devolvido uma única vez em `webhooks.criar`. */
   segredo: string
-  /** Quanto o timestamp pode estar longe do seu relógio. Padrão: 300 segundos (5 minutos). */
+  /** Quanto o timestamp pode estar longe do seu relógio, maior que zero. Padrão: 300 segundos (5 minutos). */
   toleranciaEmSegundos?: number
   /** O seu relógio, em milissegundos desde 1970. Padrão: `Date.now()`. */
   agora?: () => number
 }
 
 export type VerificacaoDoWebhook = Resultado<EventoDoWebhook, FalhaNaVerificacaoDoWebhook | FalhaDeConfiguracao>
+
+/** O instante de agora e quanto o timestamp pode se afastar dele, os dois em segundos. */
+interface JanelaDeTempo {
+  readonly agora: number
+  readonly tolerancia: number
+}
+
+interface CabecalhosDaAssinatura {
+  readonly assinatura: string
+  readonly timestamp: string
+}
 
 const CABECALHO_DA_ASSINATURA = 'x-lero-signature'
 const CABECALHO_DO_TIMESTAMP = 'x-lero-timestamp'
@@ -32,28 +43,32 @@ const TOLERANCIA_PADRAO_EM_SEGUNDOS = 300
 
 /**
  * Confere que a entrega veio do LeroLero e devolve o evento tipado. A assinatura (`X-Lero-Signature`) é
- * `sha256=` + HMAC-SHA256 em hexadecimal de `{timestamp}.{corpo}` com o segredo do endpoint; o `X-Lero-Timestamp` (segundos
- * Unix) mais velho que a tolerância é recusado, para uma entrega capturada não ser reaproveitada.
+ * `sha256=` + HMAC-SHA256 em hexadecimal de `{timestamp}.{corpo}` com o segredo do endpoint; o `X-Lero-Timestamp`
+ * (segundos Unix) fora da tolerância é recusado, para uma entrega capturada não ser reaproveitada depois. Dentro da
+ * janela, a mesma entrega pode chegar de novo: deduplique pelo `entregaId` do evento.
  *
  * @example
  * const verificacao = verificarWebhook({ corpo, cabecalhos: req.headers, segredo: process.env.LERO_WEBHOOK_SECRET })
  * if (!verificacao.sucesso) return res.status(400).end()
  */
 export function verificarWebhook(entrega: EntregaDoWebhook): VerificacaoDoWebhook {
-  if (!entrega.segredo) return falhaDeConfiguracao()
-  const assinatura = lerCabecalho(entrega.cabecalhos, CABECALHO_DA_ASSINATURA)
-  const timestamp = lerCabecalho(entrega.cabecalhos, CABECALHO_DO_TIMESTAMP)
-  if (!assinatura || !timestamp)
-    return recusa('sem_cabecalhos', 'Faltam os cabeçalhos X-Lero-Signature e X-Lero-Timestamp.')
-  if (!/^\d+$/.test(timestamp)) return recusa('timestamp_invalido', 'O X-Lero-Timestamp não é um número de segundos.')
-
-  const agora = entrega.agora?.() ?? Date.now()
-  const tolerancia = entrega.toleranciaEmSegundos ?? TOLERANCIA_PADRAO_EM_SEGUNDOS
-  if (Math.abs(agora / 1000 - Number(timestamp)) > tolerancia) {
-    return recusa('timestamp_fora_da_tolerancia', `O X-Lero-Timestamp está a mais de ${tolerancia} s do seu relógio.`)
-  }
+  if (!entrega.segredo) return falhaDeConfiguracao('Falta o segredo do endpoint: passe segredoDoWebhook ou o segredo.')
+  const janela = janelaDeTempo(entrega)
+  if (!janela) return falhaDeConfiguracao('A tolerância e o relógio precisam ser números finitos maiores que zero.')
   const corpo = comoBytes(entrega.corpo)
-  if (!assinaturaConfere(assinatura, assinar(entrega.segredo, timestamp, corpo))) {
+  if (!corpo) return recusa('corpo_invalido', 'O corpo precisa ser o texto cru ou os bytes, antes do JSON.parse.')
+  const cabecalhos = cabecalhosDaAssinatura(entrega.cabecalhos)
+  if (!cabecalhos) return recusa('sem_cabecalhos', 'Faltam os cabeçalhos X-Lero-Signature e X-Lero-Timestamp.')
+  if (!/^\d+$/.test(cabecalhos.timestamp)) {
+    return recusa('timestamp_invalido', 'O X-Lero-Timestamp não é um número de segundos.')
+  }
+  if (Math.abs(janela.agora - Number(cabecalhos.timestamp)) > janela.tolerancia) {
+    return recusa(
+      'timestamp_fora_da_tolerancia',
+      `O X-Lero-Timestamp está a mais de ${janela.tolerancia} s do seu relógio.`,
+    )
+  }
+  if (!assinaturaConfere(cabecalhos.assinatura, assinar(entrega.segredo, cabecalhos.timestamp, corpo))) {
     return recusa('assinatura_invalida', 'A assinatura não confere com o segredo do endpoint.')
   }
   return lerEvento(corpo)
@@ -65,9 +80,29 @@ export function assinar(segredo: string, timestamp: string, corpo: Uint8Array): 
   return PREFIXO_DA_ASSINATURA + hmac.digest('hex')
 }
 
-/** Comparação em tempo constante: o tempo da resposta não revela quantos caracteres batem. */
+// NaN ou Infinity desligariam a janela sem aviso, e um valor negativo recusaria tudo: os dois viram configuração.
+function janelaDeTempo(entrega: EntregaDoWebhook): JanelaDeTempo | null {
+  const tolerancia = entrega.toleranciaEmSegundos ?? TOLERANCIA_PADRAO_EM_SEGUNDOS
+  const agoraEmMilissegundos = lerRelogio(entrega.agora ?? Date.now)
+  if (!positivoFinito(tolerancia) || agoraEmMilissegundos === null || !positivoFinito(agoraEmMilissegundos)) return null
+  return { agora: agoraEmMilissegundos / 1000, tolerancia }
+}
+
+function lerRelogio(agora: () => number): number | null {
+  try {
+    return agora()
+  } catch {
+    return null
+  }
+}
+
+function positivoFinito(valor: unknown): valor is number {
+  return typeof valor === 'number' && Number.isFinite(valor) && valor > 0
+}
+
+/** O backend sempre assina em hexadecimal minúsculo: a comparação é exata, em tempo constante. */
 function assinaturaConfere(recebida: string, esperada: string): boolean {
-  const a = Buffer.from(recebida.trim().toLowerCase())
+  const a = Buffer.from(recebida)
   const b = Buffer.from(esperada)
   return a.length === b.length && timingSafeEqual(a, b)
 }
@@ -91,21 +126,30 @@ function lerJson(texto: string): unknown {
   }
 }
 
-function lerCabecalho(cabecalhos: CabecalhosRecebidos, nome: string): string | null {
-  if (cabecalhos instanceof Headers) return cabecalhos.get(nome)
-  const encontrado = Object.entries(cabecalhos).find(([chave]) => chave.toLowerCase() === nome)?.[1]
-  return (typeof encontrado === 'string' ? encontrado : encontrado?.[0]) ?? null
+function cabecalhosDaAssinatura(cabecalhos: unknown): CabecalhosDaAssinatura | null {
+  const assinatura = lerCabecalho(cabecalhos, CABECALHO_DA_ASSINATURA)
+  const timestamp = lerCabecalho(cabecalhos, CABECALHO_DO_TIMESTAMP)
+  return assinatura && timestamp ? { assinatura, timestamp } : null
 }
 
-function comoBytes(corpo: string | Uint8Array): Uint8Array {
-  return typeof corpo === 'string' ? Buffer.from(corpo, 'utf8') : corpo
+function lerCabecalho(cabecalhos: unknown, nome: string): string | null {
+  if (cabecalhos instanceof Headers) return cabecalhos.get(nome)
+  if (typeof cabecalhos !== 'object' || cabecalhos === null) return null
+  const encontrado: unknown = Object.entries(cabecalhos).find(([chave]) => chave.toLowerCase() === nome)?.[1]
+  const valor: unknown = Array.isArray(encontrado) ? encontrado[0] : encontrado
+  return typeof valor === 'string' ? valor : null
+}
+
+// Em JavaScript, ou com express.raw de outro Content-Type (req.body = {}), o corpo pode chegar de outro tipo.
+function comoBytes(corpo: unknown): Uint8Array | null {
+  if (typeof corpo === 'string') return Buffer.from(corpo, 'utf8')
+  return corpo instanceof Uint8Array ? corpo : null
 }
 
 function recusa(motivo: MotivoDaRecusaDoWebhook, description: string): VerificacaoDoWebhook {
   return { sucesso: false, dados: null, erro: { categoria: 'webhook', motivo, description } }
 }
 
-function falhaDeConfiguracao(): VerificacaoDoWebhook {
-  const description = 'Falta o segredo do endpoint: passe segredoDoWebhook no LeroLero ou o segredo na verificação.'
+function falhaDeConfiguracao(description: string): VerificacaoDoWebhook {
   return { sucesso: false, dados: null, erro: { categoria: 'configuracao', description } }
 }

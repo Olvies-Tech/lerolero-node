@@ -44,7 +44,7 @@ const CASOS: Caso[] = [
   {
     nome: 'templates.listar com filtro',
     chamar: (lero) => lero.templates.listar({ status: 'aprovado', cliente: 'clinica-sorriso', limite: 20 }),
-    esperado: { metodo: 'GET', caminho: '/v1/templates?status=aprovado&cliente=clinica-sorriso&limite=20' },
+    esperado: { metodo: 'GET', caminho: '/v1/templates?cliente=clinica-sorriso&status=aprovado&limite=20' },
   },
   {
     nome: 'templates.obter',

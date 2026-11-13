@@ -22,11 +22,17 @@ export interface ContextoDoLimite {
 }
 
 export interface OpcoesDeRetentativa {
-  /** Quantas vezes repetir depois da primeira tentativa. `0` desliga. Padrão: 3. */
+  /** Quantas vezes repetir depois da primeira tentativa: inteiro de 0 (desliga) para cima. Padrão: 3. */
   maximo?: number
-  /** A espera antes de cada repetição. Padrão: exponencial a partir de 500 ms, com variação aleatória e teto. */
+  /**
+   * A espera antes de cada repetição, em milissegundos. Padrão: exponencial a partir de 500 ms, com variação aleatória e
+   * teto. Se ela lançar ou devolver um número negativo ou não finito, vale a espera padrão daquela repetição.
+   */
   espera?: (repeticao: number) => number
-  /** Teto da espera. Um `Retry-After` maior que isto encerra as tentativas e devolve o erro. Padrão: 30 segundos. */
+  /**
+   * Teto da espera, finito e de 0 para cima. Um `Retry-After` maior que isto encerra as tentativas e devolve o erro.
+   * Padrão: 30 segundos. Valor inválido aqui ou em `maximo` faz a chamada falhar como configuração, sem ir à API.
+   */
   esperaMaximaMs?: number
   /** Chamado antes de cada repetição (log, métrica). Um erro lançado aqui é ignorado. */
   aoTentarDeNovo?: (contexto: ContextoDaRetentativa) => void | Promise<void>
@@ -37,6 +43,7 @@ export const RETENTATIVA_PADRAO = { maximo: 3, esperaInicialMs: 500, esperaMaxim
 /** O que aconteceu na tentativa, para decidir se repete. */
 export type DesfechoDaTentativa =
   | { tipo: 'resposta'; status: number; retryAfter: string | null }
+  | { tipo: 'grande_demais' }
   | { tipo: 'rede' }
   | { tipo: 'timeout' }
 
@@ -45,8 +52,9 @@ const STATUS_COM_RETRY_AFTER: ReadonlySet<number> = new Set([429, 503])
 const METODOS_SEGUROS: ReadonlySet<string> = new Set(['GET', 'HEAD'])
 
 /**
- * Uma requisição é segura para repetir quando o método não muda nada (GET, HEAD) ou quando leva `Idempotency-Key`:
- * com a mesma chave a API devolve o resultado do pedido anterior em vez de fazer de novo.
+ * Uma requisição é segura para repetir quando o método não muda nada (GET, HEAD) ou quando leva `Idempotency-Key` numa
+ * rota que deduplica por ela (hoje, só `POST /v1/messages`): ali a mesma chave devolve o pedido anterior em vez de fazer
+ * de novo. Quem pede `idempotencia` em outra rota assume a repetição.
  */
 export function ehSeguraParaRepetir(metodo: string, chaveDeIdempotencia: string | null): boolean {
   return METODOS_SEGUROS.has(metodo) || chaveDeIdempotencia !== null
@@ -54,9 +62,10 @@ export function ehSeguraParaRepetir(metodo: string, chaveDeIdempotencia: string 
 
 /**
  * Requisição segura repete em 408, 425, 429, 500, 502, 503, 504, erro de rede e tempo esgotado. As outras só repetem
- * em 429, que a API devolve antes de processar o pedido.
+ * em 429, que a API devolve antes de processar o pedido. Resposta acima do limite de tamanho não repete: viria igual.
  */
 export function deveRepetir(desfecho: DesfechoDaTentativa, segura: boolean): boolean {
+  if (desfecho.tipo === 'grande_demais') return false
   if (desfecho.tipo !== 'resposta') return segura
   if (desfecho.status === 429) return true
   return segura && STATUS_PASSAGEIROS.has(desfecho.status)

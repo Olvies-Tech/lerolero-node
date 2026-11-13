@@ -153,19 +153,29 @@ function lerDocumentacao(fonte) {
 }
 
 function montarEntrada(codigo, backend, documentado) {
+  conferirDoBackend(codigo, backend)
   const textos = documentado ?? textosSemDocumentacao(codigo.code, backend?.descricao)
   return {
     code: codigo.code,
     grupo: GRUPOS[codigo.classe],
     constante: codigo.nome,
     familia: codigo.code.split('-')[0],
-    status: backend?.status ?? null,
-    type: backend?.tipo ?? null,
+    status: backend.status,
+    type: backend.tipo,
     significado: textos.significado,
     comoResolver: textos.comoResolver,
     repetivel: REPETIVEIS.has(codigo.code),
     fonteDoTexto: documentado ? 'documentacao' : 'backend',
   }
+}
+
+// Um tipo de erro que o script não conhece, ou um status que não virou número, gravaria NaN ou undefined no catálogo.
+function conferirDoBackend(codigo, backend) {
+  const onde = `${codigo.code} (CodeErroLero.${codigo.classe}.${codigo.nome})`
+  if (!backend) throw new Error(`${onde} não tem erro declarado no LeroErro.cs.`)
+  if (!Number.isInteger(backend.tipo)) throw new Error(`${onde}: tipo de erro não mapeado em TIPOS ou TIPOS_DO_CUSTOM.`)
+  if (!Number.isInteger(backend.status)) throw new Error(`${onde}: status HTTP não é número (${backend.status}).`)
+  if (!GRUPOS[codigo.classe]) throw new Error(`${onde}: a classe ${codigo.classe} não está em GRUPOS.`)
 }
 
 function textosSemDocumentacao(code, descricao) {

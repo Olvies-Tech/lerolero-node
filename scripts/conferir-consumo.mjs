@@ -81,9 +81,12 @@ function compilar(projeto, resolucao) {
   rodar(process.execPath, [binario('typescript', 'tsc'), '-p', tsconfig], projeto)
 }
 
+// O pnpm que rodou este script (npm_execpath), sem shell: um script JavaScript roda pelo próprio Node; um binário
+// (instalação standalone) roda direto. Fora do pnpm, para com a orientação de como rodar.
 function pnpm(...argumentos) {
-  const execucao = process.env.npm_execpath
-  return execucao?.includes('pnpm') ? [process.execPath, [execucao, ...argumentos]] : ['pnpm', argumentos]
+  const execucao = process.env.npm_execpath ?? ''
+  if (!/pnpm/i.test(execucao)) throw new Error('Rode pelo pnpm: pnpm build && pnpm test:consumo')
+  return /\.[cm]?js$/.test(execucao) ? [process.execPath, [execucao, ...argumentos]] : [execucao, argumentos]
 }
 
 function binario(pacote, nome) {
@@ -93,5 +96,5 @@ function binario(pacote, nome) {
 }
 
 function rodar(comando, argumentos, cwd = RAIZ) {
-  execFileSync(comando, argumentos, { cwd, stdio: 'inherit', shell: comando === 'pnpm' })
+  execFileSync(comando, argumentos, { cwd, stdio: 'inherit' })
 }

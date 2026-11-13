@@ -59,10 +59,21 @@ export interface FalhaPorTempo {
   possivelmenteProcessada: boolean
 }
 
-/** O SDK recusou antes de chamar a API, por configuração (ex.: chave que não começa com `lero_test_` ou `lero_live_`). */
+/**
+ * O SDK recusou antes de chamar a API, por uma opção ou um parâmetro que não vale: chave fora do formato `lero_test_` ou
+ * `lero_live_`, `urlBase` sem https, número de retentativa inválido, id vazio, `.` ou `..` no caminho, nome de arquivo
+ * com quebra de linha. Nada foi enviado.
+ */
 export interface FalhaDeConfiguracao {
   categoria: 'configuracao'
   description: string
+}
+
+/** A resposta passou do limite de tamanho (`limiteDaRespostaBytes`, padrão 10 MB) e não foi lida. */
+export interface FalhaPorTamanho {
+  categoria: 'resposta_grande'
+  description: string
+  limiteBytes: number
 }
 
 /** Por que a verificação de um webhook recusou a entrega. */
@@ -81,7 +92,7 @@ export interface FalhaNaVerificacaoDoWebhook {
 }
 
 /** Os erros de uma chamada à API. Use `categoria` para decidir o que fazer. */
-export type ErroDaChamada = FalhaDaApi | FalhaDeRede | FalhaPorTempo | FalhaDeConfiguracao
+export type ErroDaChamada = FalhaDaApi | FalhaDeRede | FalhaPorTempo | FalhaDeConfiguracao | FalhaPorTamanho
 
 /** Todo erro que um método do SDK pode devolver. */
 export type ErroDoLeroLero = ErroDaChamada | FalhaNaVerificacaoDoWebhook

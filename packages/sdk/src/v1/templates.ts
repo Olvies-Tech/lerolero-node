@@ -1,4 +1,4 @@
-import { type ClienteRest, rota } from '@lerolero/rest'
+import { type ClienteRest, consultaDoFiltro, rota } from '@lerolero/rest'
 import type {
   FiltroDeTemplates,
   IdDoTemplate,
@@ -34,10 +34,20 @@ export interface Templates {
   obter(id: IdDoTemplate): Promise<RespostaDaApi<TemplateDetalhado>>
 }
 
+/** Os filtros que o `GET /v1/templates` aceita; qualquer outro campo do objeto fica fora da query. */
+const CHAVES_DO_FILTRO: readonly (keyof FiltroDeTemplates)[] = [
+  'cliente',
+  'status',
+  'categoria',
+  'nome',
+  'pagina',
+  'limite',
+]
+
 export function criarTemplates(rest: ClienteRest): Templates {
   return {
     criar: (template, opcoes = {}) => rest.post('/templates', template, { consulta: { rascunho: opcoes.rascunho } }),
-    listar: (filtro = {}) => rest.get('/templates', { consulta: { ...filtro } }),
+    listar: (filtro = {}) => rest.get('/templates', { consulta: consultaDoFiltro(filtro, CHAVES_DO_FILTRO) }),
     obter: (id) => rest.get(rota`/templates/${id}`),
   }
 }

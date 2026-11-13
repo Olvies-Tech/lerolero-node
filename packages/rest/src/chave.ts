@@ -6,19 +6,14 @@ export interface ChaveDaApi {
   readonly ambiente: Ambiente
 }
 
+// Só letras, números, _ e -: uma chave com espaço ou caractere de controle nem chega ao cabeçalho, e assim nenhuma
+// mensagem de erro do runtime ecoa a chave.
+const FORMATO_DA_CHAVE = /^lero_(test|live)_[A-Za-z0-9_-]{1,256}$/
+
 /** Lê a chave e descobre o ambiente pelo prefixo; devolve `null` quando ela não é uma chave do LeroLero. */
 export function lerChave(texto: string | undefined): ChaveDaApi | null {
   const valor = texto?.trim() ?? ''
-  const ambiente = ambienteDoPrefixo(valor)
-  return ambiente ? { valor, ambiente } : null
-}
-
-function ambienteDoPrefixo(valor: string): Ambiente | null {
-  if (comecaCom(valor, 'lero_test_')) return 'teste'
-  if (comecaCom(valor, 'lero_live_')) return 'producao'
-  return null
-}
-
-function comecaCom(valor: string, prefixo: string): boolean {
-  return valor.startsWith(prefixo) && valor.length > prefixo.length
+  const formato = FORMATO_DA_CHAVE.exec(valor)
+  if (!formato) return null
+  return { valor, ambiente: formato[1] === 'live' ? 'producao' : 'teste' }
 }

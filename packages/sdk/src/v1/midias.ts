@@ -1,10 +1,10 @@
-import { type ClienteRest, rota } from '@lerolero/rest'
+import { type ClienteRest, recusaAntesDaChamada, rota } from '@lerolero/rest'
 import type { IdDaMidia, Midia, RespostaDaApi } from '@lerolero/types/v1'
 
 /** O arquivo a subir: o conteúdo, o nome (com a extensão) e o tipo do conteúdo. */
 export interface ArquivoDaMidia {
   conteudo: Blob | Uint8Array | ArrayBuffer
-  /** Ex.: `boleto-novembro.pdf`. */
+  /** Ex.: `boleto-novembro.pdf`. Até 255 caracteres, sem quebra de linha, aspas nem barra invertida. */
   nome: string
   /** Ex.: `application/pdf`. Sem ele, a API decide pela extensão do nome. */
   tipo?: string
@@ -26,11 +26,32 @@ export interface Midias {
   obter(id: IdDaMidia): Promise<RespostaDaApi<Midia>>
 }
 
+// O nome e o tipo vão no cabeçalho da parte do multipart: quebra de linha, aspas ou barra invertida poderiam abrir um
+// cabeçalho novo ou fechar o filename antes da hora, então nem chegam ao FormData.
+const NOME_SEGURO = /^[^\p{Cc}"\\]{1,255}$/u
+const TIPO_DE_CONTEUDO = /^[\w!#$&^.+-]+\/[\w!#$&^.+-]+$/
+
 export function criarMidias(rest: ClienteRest): Midias {
   return {
-    subir: (arquivo) => rest.post('/media', formularioDoArquivo(arquivo)),
+    subir: async (arquivo) => {
+      const problema = problemaNoArquivo(arquivo)
+      return problema ? recusaAntesDaChamada(problema) : rest.post('/media', formularioDoArquivo(arquivo))
+    },
     obter: (id) => rest.get(rota`/media/${id}`),
   }
+}
+
+function problemaNoArquivo({ conteudo, nome, tipo }: ArquivoDaMidia): string | null {
+  if (!(conteudo instanceof Blob || conteudo instanceof Uint8Array || conteudo instanceof ArrayBuffer)) {
+    return 'O conteúdo do arquivo precisa ser Blob, Uint8Array (Buffer) ou ArrayBuffer.'
+  }
+  if (typeof nome !== 'string' || !NOME_SEGURO.test(nome)) {
+    return 'O nome do arquivo precisa ter de 1 a 255 caracteres, sem quebra de linha, aspas nem barra invertida.'
+  }
+  if (tipo !== undefined && !TIPO_DE_CONTEUDO.test(tipo)) {
+    return 'O tipo do arquivo precisa ser um tipo de conteúdo como application/pdf ou image/png.'
+  }
+  return null
 }
 
 function formularioDoArquivo({ conteudo, nome, tipo }: ArquivoDaMidia): FormData {

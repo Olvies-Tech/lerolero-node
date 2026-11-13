@@ -369,6 +369,30 @@ A assinatura é `sha256=` + HMAC-SHA256 de `{timestamp}.{corpo}` com o segredo d
 5 minutos é recusado. O segredo aparece uma única vez, na resposta de `lero.webhooks.criar`: guarde no seu cofre. O
 [vetor de teste](./vetores/assinatura-do-webhook.json) é o mesmo do SDK C# e da documentação.
 
+**Processe cada entrega uma vez só.** Dentro da janela de 5 minutos, a mesma entrega assinada passa de novo na
+verificação: o LeroLero reenvia quando o seu servidor não responde 2xx, e quem capturou a requisição pode repeti-la.
+Deduplique pelo `entregaId`, que está no corpo assinado e é o mesmo em todas as tentativas da entrega. O cabeçalho
+`X-Lero-Event-Id` traz o mesmo valor, mas **não é coberto pela assinatura**: não use o cabeçalho para deduplicar.
+
+```ts
+import { LeroLero } from '@lerolero/sdk'
+
+const lero = LeroLero({ segredoDoWebhook: process.env.LERO_WEBHOOK_SECRET })
+const jaProcessadas = new Set<string>() // em produção, uma tabela com índice único no entregaId
+
+export function receber(corpoCru: Buffer, cabecalhos: Record<string, string | string[] | undefined>): number {
+  const verificacao = lero.webhooks.verificar(corpoCru, cabecalhos)
+  if (!verificacao.sucesso) return 400
+
+  const { entregaId } = verificacao.dados
+  if (jaProcessadas.has(entregaId)) return 200
+  jaProcessadas.add(entregaId)
+
+  // processe verificacao.dados aqui
+  return 200
+}
+```
+
 ## Teste e produção
 
 | Chave        | Ambiente | O que acontece                                                              |
@@ -424,7 +448,8 @@ if (ehErro(resultado, Erros.Mensagens.JanelaFechada)) {
 | `inesperado`     | Erro interno. A `description` traz o código de correlação para o suporte.               |
 | `rede`           | A requisição não chegou à API.                                                          |
 | `timeout`        | A API não respondeu a tempo. `possivelmenteProcessada` diz se o pedido pode ter saído.   |
-| `configuracao`   | Faltou a chave, ou ela não começa com `lero_test_` nem `lero_live_`.                     |
+| `configuracao`   | O SDK recusou antes de chamar a API: chave fora do formato, `urlBase` sem https, id vazio, `.` ou `..`, opção inválida. |
+| `resposta_grande` | A resposta passou de `limiteDaRespostaBytes` (padrão 10 MB) e não foi lida.            |
 
 `ehDaFamilia(resultado, 'EXMT')` reconhece uma família inteira (aqui, os erros que vêm da Meta). Os 81 códigos, com o
 significado e o que fazer, estão em [lerolero.tech/docs/referencia/erros](https://lerolero.tech/docs/referencia/erros)
@@ -459,7 +484,13 @@ if (primeira.erro?.categoria === 'timeout') {
 ```
 
 Para mudar o padrão: `LeroLero({ tempoLimiteMs: 10_000, retentativa: { maximo: 5 } })`, ou as mesmas opções numa
-chamada do `lero.rest`.
+chamada do `lero.rest`. Valor que não faz sentido (`maximo: -1`, `esperaMaximaMs: NaN`, `tempoLimiteMs: 0`) não vira o
+padrão em silêncio: a chamada falha como `configuracao`, sem ir à API.
+
+**Idempotência fora do envio de mensagem:** hoje a API só deduplica pela `Idempotency-Key` no `POST /v1/messages`, que o
+`mensagens.enviar` já usa. O `lero.rest` aceita `{ idempotencia: {} }` em qualquer rota, e aí também repete em 5xx e
+timeout, mas em outra rota a API pode fazer o pedido duas vezes. Peça a idempotência só onde repetir for seguro para
+você.
 
 ## O que a v1 cobre
 
@@ -509,6 +540,8 @@ Os três saem em ESM e CommonJS, com `sideEffects: false` e sem nenhuma dependê
 - Códigos de erro: [lerolero.tech/docs/referencia/erros](https://lerolero.tech/docs/referencia/erros)
 - Criar conta: [lerolero.tech/criar-conta](https://lerolero.tech/criar-conta)
 - Suporte para desenvolvedores: [desenvolvimento@lerolero.tech](mailto:desenvolvimento@lerolero.tech)
+
+Para quem mantém o SDK: o passo a passo de uma versão no npm está em [docs/publicar.md](./docs/publicar.md).
 
 ## Licença
 

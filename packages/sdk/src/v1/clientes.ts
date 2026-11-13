@@ -1,4 +1,4 @@
-import { type ClienteRest, rota } from '@lerolero/rest'
+import { type ClienteRest, consultaDoFiltro, rota } from '@lerolero/rest'
 import type {
   Cliente,
   FiltroDeClientes,
@@ -24,10 +24,13 @@ export interface Clientes {
   obter(cliente: ReferenciaDoCliente): Promise<RespostaDaApi<Cliente>>
 }
 
+/** Os filtros que o `GET /v1/clientes` aceita; qualquer outro campo do objeto fica fora da query. */
+const CHAVES_DO_FILTRO: readonly (keyof FiltroDeClientes)[] = ['busca', 'ambiente', 'pagina', 'limite']
+
 export function criarClientes(rest: ClienteRest): Clientes {
   return {
     criar: (cliente) => rest.post('/clientes', cliente),
-    listar: (filtro = {}) => rest.get('/clientes', { consulta: { ...filtro } }),
+    listar: (filtro = {}) => rest.get('/clientes', { consulta: consultaDoFiltro(filtro, CHAVES_DO_FILTRO) }),
     obter: (cliente) => rest.get(rota`/clientes/${cliente}`),
   }
 }
