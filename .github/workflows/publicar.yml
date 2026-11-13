@@ -1,0 +1,66 @@
+name: Publicar no npm
+
+# Dispara com uma tag de versão (ex.: v1.0.0) igual à versão dos três pacotes. Só publica quando o segredo NPM_TOKEN
+# existir no repositório; até lá, o job avisa e termina sem publicar nada.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  segredo:
+    name: Conferir o NPM_TOKEN
+    runs-on: ubuntu-latest
+    outputs:
+      tem-token: ${{ steps.conferir.outputs.tem-token }}
+    steps:
+      - id: conferir
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            echo "tem-token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tem-token=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Sem o segredo NPM_TOKEN no repositório: nada foi publicado."
+          fi
+
+  publicar:
+    name: Publicar @lerolero/types, @lerolero/rest e @lerolero/sdk
+    needs: segredo
+    if: needs.segredo.outputs.tem-token == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - name: A tag é a versão dos pacotes
+        run: |
+          versao="${GITHUB_REF_NAME#v}"
+          for pacote in types rest sdk; do
+            atual=$(node -p "require('./packages/$pacote/package.json').version")
+            if [ "$atual" != "$versao" ]; then
+              echo "::error::@lerolero/$pacote está em $atual e a tag é $GITHUB_REF_NAME."
+              exit 1
+            fi
+          done
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm tipos
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm test:consumo
+      - name: Publicar
+        run: pnpm -r publish --access public --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'

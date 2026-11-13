@@ -1,0 +1,36 @@
+{
+  "name": "lerolero-node",
+  "private": true,
+  "description": "SDK oficial do LeroLero para Node.js e TypeScript (monorepo).",
+  "license": "Apache-2.0",
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=18.18"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "tipos": "tsc -p tsconfig.json",
+    "lint": "biome check .",
+    "formatar": "biome check --write .",
+    "test": "vitest run",
+    "test:consumo": "node scripts/conferir-consumo.mjs",
+    "test:integracao": "vitest run --config vitest.integracao.config.ts",
+    "openapi:atualizar": "node scripts/atualizar-openapi.mjs && openapi-typescript openapi/v1.json -o packages/types/test/openapi.gerado.ts",
+    "erros:atualizar": "node scripts/gerar-catalogo-de-erros.mjs ../LeroLero ../lerolero-web"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.2",
+    "@biomejs/biome": "1.9.4",
+    "@types/node": "18.19.64",
+    "openapi-typescript": "7.4.4",
+    "tsup": "8.3.5",
+    "typescript": "5.6.3",
+    "vitest": "2.1.9"
+  },
+  "pnpm": {
+    "overrides": {
+      "fflate": "0.8.2"
+    }
+  }
+}

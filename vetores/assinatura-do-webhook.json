@@ -1,0 +1,35 @@
+{
+  "descricao": "Vetor de teste da assinatura dos webhooks do LeroLero, o mesmo para os SDKs Node (PBI 269) e C# (PBI 188). X-Lero-Signature = \"sha256=\" + HMAC-SHA256 em hexadecimal minúsculo de \"{timestamp}.{corpo}\" (UTF-8) com o segredo do endpoint; X-Lero-Timestamp em segundos Unix; tolerância de 300 segundos. Conferido com System.Security.Cryptography.HMACSHA256 (.NET), a mesma do backend (AssinaturaDoWebhook.Assinar). O segredo é só deste vetor.",
+  "segredo": "whsec_vetor_de_teste_do_sdk_nao_use_em_producao",
+  "timestamp": 1792674903,
+  "corpo": "{\"evento\":\"message.button_reply\",\"entregaId\":\"evt_789\",\"cliente\":\"clinica-sorriso\",\"contato\":{\"telefone\":\"+5511999999999\",\"nome\":\"Ana Lúcia\"},\"resposta\":{\"payload\":\"CONFIRMAR:123\",\"texto\":\"Sim\",\"interpretado\":false,\"recebidaEm\":\"2026-10-22T10:15:03-03:00\",\"optOut\":false},\"mensagemOriginal\":{\"id\":\"msg_456\",\"template\":\"confirmacao_agendamento\",\"enviadaEm\":\"2026-10-21T18:00:00-03:00\",\"metadata\":{\"agendamentoId\":\"123\"}}}",
+  "assinatura": "sha256=fa6b0060a6e1c90247da33fb93d89e7104cca0ebe9df259aa230253f52be90af",
+  "casos": [
+    {
+      "nome": "aceita a entrega assinada dentro da tolerância",
+      "agora": 1792674963,
+      "assinatura": "sha256=fa6b0060a6e1c90247da33fb93d89e7104cca0ebe9df259aa230253f52be90af",
+      "aceita": true
+    },
+    {
+      "nome": "recusa a assinatura de outro segredo",
+      "agora": 1792674963,
+      "assinatura": "sha256=fa6b0060a6e1c90247da33fb93d89e7104cca0ebe9df259aa230253f52be90ae",
+      "aceita": false,
+      "motivo": "assinatura_invalida"
+    },
+    {
+      "nome": "recusa o timestamp mais velho que 5 minutos",
+      "agora": 1792675204,
+      "assinatura": "sha256=fa6b0060a6e1c90247da33fb93d89e7104cca0ebe9df259aa230253f52be90af",
+      "aceita": false,
+      "motivo": "timestamp_fora_da_tolerancia"
+    },
+    {
+      "nome": "aceita no limite exato de 5 minutos",
+      "agora": 1792675203,
+      "assinatura": "sha256=fa6b0060a6e1c90247da33fb93d89e7104cca0ebe9df259aa230253f52be90af",
+      "aceita": true
+    }
+  ]
+}
