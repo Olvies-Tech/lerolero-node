@@ -1,0 +1,46 @@
+{
+  "name": "@lerolero/rest",
+  "version": "1.0.0",
+  "description": "Cliente HTTP da API do LeroLero: chave no cabeçalho, tempo limite, retentativa com espera crescente, idempotência e resultado sem exceção.",
+  "license": "Apache-2.0",
+  "author": "OliveS Tech",
+  "homepage": "https://lerolero.tech/docs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Olvies-Tech/lerolero-node.git",
+    "directory": "packages/rest"
+  },
+  "keywords": ["lerolero", "whatsapp", "api", "rest", "fetch"],
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.18"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.cts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup"
+  },
+  "dependencies": {
+    "@lerolero/types": "workspace:^"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

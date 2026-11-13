@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 420" width="1280" height="420" role="img" aria-labelledby="titulo descricao">
+  <title id="titulo">LeroLero SDK para Node.js e TypeScript</title>
+  <desc id="descricao">A API oficial do WhatsApp para quem desenvolve. Três linhas de código enviam um template, que segue de queued para sent, delivered e read.</desc>
+  <defs>
+    <pattern id="grade" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#161616" stroke-width="1"/>
+    </pattern>
+    <linearGradient id="apagar" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity="1"/>
+      <stop offset="0.55" stop-color="#000" stop-opacity="0.92"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.35"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="420" rx="20" fill="#000"/>
+  <rect width="1280" height="420" rx="20" fill="url(#grade)"/>
+  <rect width="1280" height="420" rx="20" fill="url(#apagar)"/>
+  <rect x="0.5" y="0.5" width="1279" height="419" rx="19.5" fill="none" stroke="#1f1f1f"/>
+
+  <g transform="translate(72 96)">
+    <svg x="0" y="0" width="52" height="52" viewBox="7 7 34 34">
+      <path fill="#EDEDED" d="M8 8H18V30H27V40H12A4 4 0 0 1 8 36Z"/>
+      <path fill="#A4B35C" d="M40 40H30V18H21V8H36A4 4 0 0 1 40 12Z"/>
+    </svg>
+    <text x="70" y="40" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="42" font-weight="700" letter-spacing="-1.7" fill="#EDEDED">Lero<tspan fill="#A4B35C">Lero</tspan></text>
+    <text x="0" y="128" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="30" font-weight="600" letter-spacing="-0.8" fill="#EDEDED">A API oficial do WhatsApp</text>
+    <text x="0" y="166" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="30" font-weight="600" letter-spacing="-0.8" fill="#EDEDED">para quem desenvolve.</text>
+    <text x="0" y="214" font-family="ui-sans-serif, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="18" fill="#A1A1A1">SDK oficial para Node.js e TypeScript</text>
+  </g>
+
+  <g transform="translate(636 72)">
+    <rect width="572" height="276" rx="14" fill="#070707" stroke="#262626"/>
+    <circle cx="26" cy="24" r="5" fill="#262626"/>
+    <circle cx="44" cy="24" r="5" fill="#262626"/>
+    <circle cx="62" cy="24" r="5" fill="#262626"/>
+    <text x="548" y="29" text-anchor="end" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12" fill="#555">enviar.ts</text>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="15" fill="#D4D4D4">
+      <text x="28" y="76"><tspan fill="#A4B35C">import</tspan> { LeroLero } <tspan fill="#A4B35C">from</tspan> <tspan fill="#C9D38F">'@lerolero/sdk'</tspan></text>
+      <text x="28" y="108"><tspan fill="#A4B35C">const</tspan> lero = LeroLero()</text>
+      <text x="28" y="140"><tspan fill="#A4B35C">await</tspan> lero.mensagens.enviar({ to, template: <tspan fill="#C9D38F">'pedido_saiu'</tspan> })</text>
+    </g>
+    <path d="M28 176H544" stroke="#1f1f1f"/>
+    <g font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13">
+      <path d="M44 222H500" stroke="#A4B35C" stroke-width="2"/>
+      <circle cx="44" cy="222" r="7" fill="#070707" stroke="#A4B35C" stroke-width="2"/>
+      <circle cx="196" cy="222" r="7" fill="#070707" stroke="#A4B35C" stroke-width="2"/>
+      <circle cx="348" cy="222" r="7" fill="#070707" stroke="#A4B35C" stroke-width="2"/>
+      <circle cx="500" cy="222" r="11" fill="#A4B35C"/>
+      <path d="M494.5 222.5l3.6 3.6 7-7.4" fill="none" stroke="#000" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="44" y="256" text-anchor="middle" fill="#8A8A8A">queued</text>
+      <text x="196" y="256" text-anchor="middle" fill="#8A8A8A">sent</text>
+      <text x="348" y="256" text-anchor="middle" fill="#8A8A8A">delivered</text>
+      <text x="500" y="256" text-anchor="middle" fill="#C9D38F">read</text>
+    </g>
+  </g>
+</svg>

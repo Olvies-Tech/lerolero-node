@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "@lerolero/types/v1": ["./packages/types/src/v1/index.ts"],
+      "@lerolero/rest": ["./packages/rest/src/index.ts"],
+      "@lerolero/sdk": ["./packages/sdk/src/v1/index.ts"],
+      "@lerolero/sdk/v1": ["./packages/sdk/src/v1/index.ts"]
+    }
+  },
+  "include": ["packages/*/test/**/*.ts", "test/**/*.ts", "integracao/**/*.ts", "vitest*.config.ts"],
+  "exclude": ["test/readme"]
+}

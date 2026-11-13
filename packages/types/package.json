@@ -1,0 +1,43 @@
+{
+  "name": "@lerolero/types",
+  "version": "1.0.0",
+  "description": "Tipos da API do LeroLero (mensagens, templates, mídias, clientes, webhooks e eventos), por versão da API.",
+  "license": "Apache-2.0",
+  "author": "OliveS Tech",
+  "homepage": "https://lerolero.tech/docs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Olvies-Tech/lerolero-node.git",
+    "directory": "packages/types"
+  },
+  "keywords": ["lerolero", "whatsapp", "api", "types", "typescript"],
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.18"
+  },
+  "main": "./dist/v1/index.cjs",
+  "module": "./dist/v1/index.js",
+  "types": "./dist/v1/index.d.cts",
+  "exports": {
+    "./v1": {
+      "import": {
+        "types": "./dist/v1/index.d.ts",
+        "default": "./dist/v1/index.js"
+      },
+      "require": {
+        "types": "./dist/v1/index.d.cts",
+        "default": "./dist/v1/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "name": "@lerolero/sdk",
+  "version": "1.0.0",
+  "description": "SDK oficial do LeroLero para Node.js e TypeScript: envio de mensagens no WhatsApp, templates, mídias, clientes e verificação de webhook.",
+  "license": "Apache-2.0",
+  "author": "OliveS Tech",
+  "homepage": "https://lerolero.tech/docs",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Olvies-Tech/lerolero-node.git",
+    "directory": "packages/sdk"
+  },
+  "keywords": ["lerolero", "whatsapp", "whatsapp-business", "api", "sdk", "webhook"],
+  "type": "module",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.18"
+  },
+  "main": "./dist/v1/index.cjs",
+  "module": "./dist/v1/index.js",
+  "types": "./dist/v1/index.d.cts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/v1/index.d.ts",
+        "default": "./dist/v1/index.js"
+      },
+      "require": {
+        "types": "./dist/v1/index.d.cts",
+        "default": "./dist/v1/index.cjs"
+      }
+    },
+    "./v1": {
+      "import": {
+        "types": "./dist/v1/index.d.ts",
+        "default": "./dist/v1/index.js"
+      },
+      "require": {
+        "types": "./dist/v1/index.d.cts",
+        "default": "./dist/v1/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsup"
+  },
+  "dependencies": {
+    "@lerolero/rest": "workspace:^",
+    "@lerolero/types": "workspace:^"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  }
+}
